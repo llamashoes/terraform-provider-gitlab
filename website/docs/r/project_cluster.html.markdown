@@ -23,6 +23,7 @@ resource "gitlab_project" "foo" {
 resource gitlab_project_cluster "bar" {
   project                       = "${gitlab_project.foo.id}"
   name                          = "bar-cluster"
+  domain                        = "example.com"
   enabled                       = true
   kubernetes_api_url            = "https://124.124.124"
   kubernetes_token              = "some-token"
@@ -41,16 +42,20 @@ The following arguments are supported:
 
 * `name` - (Required, string) The name of cluster.
 
-* `enabled` - (Optional, boolean) Determines if cluster is active or not. Defaults to `true`.
+* `domain` - (Optional, string) The base domain of the cluster.
+
+* `enabled` - (Optional, boolean) Determines if cluster is active or not. Defaults to `true`. This attribute cannot be read.
+
+* `managed` - (Optional, boolean) Determines if cluster is managed by gitlab or not. Defaults to `true`. This attribute cannot be read.
 
 * `kubernetes_api_url` - (Required, string) The URL to access the Kubernetes API.
 
 * `kubernetes_token` - (Required, string) The token to authenticate against Kubernetes.
- 
+
 * `kubernetes_ca_cert` - (Optional, string) TLS certificate (needed if API is using a self-signed TLS certificate).
- 
+
 * `kubernetes_namespace` - (Optional, string) The unique namespace related to the project.
- 
+
 * `kubernetes_authorization_type` - (Optional, string) The cluster authorization type. Valid values are `rbac`, `abac`, `unknown_authorization`. Defaults to `rbac`.
 
 * `environment_scope` - (Optional, string) The associated environment to the cluster. Defaults to `*`.

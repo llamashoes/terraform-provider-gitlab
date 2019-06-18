@@ -300,6 +300,7 @@ type Client struct {
 	Deployments           *DeploymentsService
 	Discussions           *DiscussionsService
 	Environments          *EnvironmentsService
+	Epics                 *EpicsService
 	Events                *EventsService
 	Features              *FeaturesService
 	GitIgnoreTemplates    *GitIgnoreTemplatesService
@@ -329,6 +330,7 @@ type Client struct {
 	Pipelines             *PipelinesService
 	ProjectBadges         *ProjectBadgesService
 	ProjectCluster        *ProjectClustersService
+	ProjectImportExport   *ProjectImportExportService
 	ProjectMembers        *ProjectMembersService
 	ProjectSnippets       *ProjectSnippetsService
 	ProjectVariables      *ProjectVariablesService
@@ -447,6 +449,7 @@ func newClient(httpClient *http.Client) *Client {
 	c.Deployments = &DeploymentsService{client: c}
 	c.Discussions = &DiscussionsService{client: c}
 	c.Environments = &EnvironmentsService{client: c}
+	c.Epics = &EpicsService{client: c}
 	c.Events = &EventsService{client: c}
 	c.Features = &FeaturesService{client: c}
 	c.GitIgnoreTemplates = &GitIgnoreTemplatesService{client: c}
@@ -476,6 +479,7 @@ func newClient(httpClient *http.Client) *Client {
 	c.Pipelines = &PipelinesService{client: c}
 	c.ProjectBadges = &ProjectBadgesService{client: c}
 	c.ProjectCluster = &ProjectClustersService{client: c}
+	c.ProjectImportExport = &ProjectImportExportService{client: c}
 	c.ProjectMembers = &ProjectMembersService{client: c}
 	c.ProjectSnippets = &ProjectSnippetsService{client: c}
 	c.ProjectVariables = &ProjectVariablesService{client: c}
@@ -716,6 +720,11 @@ func parseID(id interface{}) (string, error) {
 	default:
 		return "", fmt.Errorf("invalid ID type %#v, the ID must be an int or a string", id)
 	}
+}
+
+// Helper function to escape a project identifier.
+func pathEscape(s string) string {
+	return strings.Replace(url.PathEscape(s), ".", "%2E", -1)
 }
 
 // An ErrorResponse reports one or more errors caused by an API request.

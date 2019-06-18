@@ -21,11 +21,27 @@ func TestAccGitlabProjectCluster_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create a project and cluster with default options
 			{
-				Config: testAccGitlabProjectClusterConfig(rInt),
+				Config: testAccGitlabProjectClusterConfig(rInt, true),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckGitlabProjectClusterExists("gitlab_project_cluster.foo", &cluster),
 					testAccCheckGitlabProjectClusterAttributes(&cluster, &testAccGitlabProjectClusterExpectedAttributes{
 						Name:                        fmt.Sprintf("foo-cluster-%d", rInt),
+						Domain:                      "example.com",
+						EnvironmentScope:            "*",
+						KubernetesApiURL:            "https://123.123.123",
+						KubernetesCACert:            projectClusterFakeCert,
+						KubernetesAuthorizationType: "abac",
+					}),
+				),
+			},
+			// create an unmanaged cluster
+			{
+				Config: testAccGitlabProjectClusterConfig(rInt, false),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckGitlabProjectClusterExists("gitlab_project_cluster.foo", &cluster),
+					testAccCheckGitlabProjectClusterAttributes(&cluster, &testAccGitlabProjectClusterExpectedAttributes{
+						Name:                        fmt.Sprintf("foo-cluster-%d", rInt),
+						Domain:                      "example.com",
 						EnvironmentScope:            "*",
 						KubernetesApiURL:            "https://123.123.123",
 						KubernetesCACert:            projectClusterFakeCert,
@@ -40,6 +56,7 @@ func TestAccGitlabProjectCluster_basic(t *testing.T) {
 					testAccCheckGitlabProjectClusterExists("gitlab_project_cluster.foo", &cluster),
 					testAccCheckGitlabProjectClusterAttributes(&cluster, &testAccGitlabProjectClusterExpectedAttributes{
 						Name:                        fmt.Sprintf("foo-cluster-%d", rInt),
+						Domain:                      "example-new.com",
 						EnvironmentScope:            "*",
 						KubernetesApiURL:            "https://124.124.124",
 						KubernetesCACert:            projectClusterFakeCert,
@@ -55,6 +72,7 @@ func TestAccGitlabProjectCluster_basic(t *testing.T) {
 					testAccCheckGitlabProjectClusterExists("gitlab_project_cluster.foo", &cluster),
 					testAccCheckGitlabProjectClusterAttributes(&cluster, &testAccGitlabProjectClusterExpectedAttributes{
 						Name:                        fmt.Sprintf("foo-cluster-%d", rInt),
+						Domain:                      "example-new.com",
 						EnvironmentScope:            "*",
 						KubernetesApiURL:            "https://124.124.124",
 						KubernetesCACert:            projectClusterFakeCert,
@@ -76,13 +94,13 @@ func TestAccGitlabProjectCluster_import(t *testing.T) {
 		CheckDestroy: testAccCheckGitlabProjectClusterDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGitlabProjectClusterConfig(rInt),
+				Config: testAccGitlabProjectClusterConfig(rInt, true),
 			},
 			{
 				ResourceName:            "gitlab_project_cluster.foo",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"enabled", "kubernetes_token"},
+				ImportStateVerifyIgnore: []string{"enabled", "kubernetes_token", "managed"},
 			},
 		},
 	})
@@ -90,6 +108,7 @@ func TestAccGitlabProjectCluster_import(t *testing.T) {
 
 type testAccGitlabProjectClusterExpectedAttributes struct {
 	Name                        string
+	Domain                      string
 	EnvironmentScope            string
 	KubernetesApiURL            string
 	KubernetesCACert            string
@@ -155,6 +174,10 @@ func testAccCheckGitlabProjectClusterAttributes(cluster *gitlab.ProjectCluster, 
 			return fmt.Errorf("got name %q; want %q", cluster.Name, want.Name)
 		}
 
+		if cluster.Domain != want.Domain {
+			return fmt.Errorf("got domain %q; want %q", cluster.Domain, want.Domain)
+		}
+
 		if cluster.EnvironmentScope != want.EnvironmentScope {
 			return fmt.Errorf("got environment scope %q; want %q", cluster.EnvironmentScope, want.EnvironmentScope)
 		}
@@ -179,7 +202,12 @@ func testAccCheckGitlabProjectClusterAttributes(cluster *gitlab.ProjectCluster, 
 	}
 }
 
-func testAccGitlabProjectClusterConfig(rInt int) string {
+func testAccGitlabProjectClusterConfig(rInt int, managed bool) string {
+	m := "false"
+	if managed {
+		m = "true"
+	}
+
 	return fmt.Sprintf(`
 variable "cert" {
   default = <<EOF
@@ -199,12 +227,14 @@ resource "gitlab_project" "foo" {
 resource gitlab_project_cluster "foo" {
   project                       = "${gitlab_project.foo.id}"
   name                          = "foo-cluster-%d"
+  domain                        = "example.com"
+  managed                       = "%s"
   kubernetes_api_url            = "https://123.123.123"
   kubernetes_token              = "some-token"
   kubernetes_ca_cert            = "${trimspace(var.cert)}"
   kubernetes_authorization_type = "abac"
 }
-`, projectClusterFakeCert, rInt, rInt)
+`, projectClusterFakeCert, rInt, rInt, m)
 }
 
 func testAccGitlabProjectClusterUpdateConfig(rInt int, authType string) string {
@@ -227,6 +257,7 @@ resource "gitlab_project" "foo" {
 resource gitlab_project_cluster "foo" {
   project                       = "${gitlab_project.foo.id}"
   name                          = "foo-cluster-%d"
+  domain                        = "example-new.com"
   kubernetes_api_url            = "https://124.124.124"
   kubernetes_token              = "some-token"
   kubernetes_ca_cert            = "${trimspace(var.cert)}"

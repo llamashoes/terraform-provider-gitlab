@@ -30,7 +30,17 @@ func resourceGitlabProjectCluster() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"domain": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"enabled": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
+				ForceNew: true,
+			},
+			"managed": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  true,
@@ -109,7 +119,12 @@ func resourceGitlabProjectClusterCreate(d *schema.ResourceData, meta interface{}
 	options := &gitlab.AddClusterOptions{
 		Name:               gitlab.String(d.Get("name").(string)),
 		Enabled:            gitlab.Bool(d.Get("enabled").(bool)),
+		Managed:            gitlab.Bool(d.Get("managed").(bool)),
 		PlatformKubernetes: &pk,
+	}
+
+	if v, ok := d.GetOk("domain"); ok {
+		options.Domain = gitlab.String(v.(string))
 	}
 
 	if v, ok := d.GetOk("environment_scope"); ok {
@@ -140,19 +155,14 @@ func resourceGitlabProjectClusterRead(d *schema.ResourceData, meta interface{}) 
 
 	log.Printf("[DEBUG] read gitlab project cluster %q/%d", project, clusterId)
 
-	cluster, response, err := client.ProjectCluster.GetCluster(project, clusterId)
+	cluster, _, err := client.ProjectCluster.GetCluster(project, clusterId)
 	if err != nil {
-		if response.StatusCode == 404 {
-			log.Printf("[WARN] removing project cluster %s/%d from state because it no longer exists in gitlab", project, clusterId)
-			d.SetId("")
-			return nil
-		}
-
 		return err
 	}
 
 	d.Set("project", project)
 	d.Set("name", cluster.Name)
+	d.Set("domain", cluster.Domain)
 	d.Set("created_at", cluster.CreatedAt.String())
 	d.Set("provider_type", cluster.ProviderType)
 	d.Set("platform_type", cluster.PlatformType)
@@ -179,6 +189,10 @@ func resourceGitlabProjectClusterUpdate(d *schema.ResourceData, meta interface{}
 
 	if d.HasChange("name") {
 		options.Name = gitlab.String(d.Get("name").(string))
+	}
+
+	if d.HasChange("domain") {
+		options.Domain = gitlab.String(d.Get("domain").(string))
 	}
 
 	if d.HasChange("environment_scope") {

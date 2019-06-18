@@ -11,6 +11,145 @@ import (
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
+var resourceGitLabProjectSchema = map[string]*schema.Schema{
+	"name": {
+		Type:     schema.TypeString,
+		Required: true,
+	},
+	"path": {
+		Type:     schema.TypeString,
+		Optional: true,
+		DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+			if new == "" {
+				return true
+			}
+			return old == new
+		},
+	},
+	"namespace_id": {
+		Type:     schema.TypeInt,
+		Optional: true,
+		ForceNew: true,
+		Computed: true,
+	},
+	"description": {
+		Type:     schema.TypeString,
+		Optional: true,
+	},
+	"default_branch": {
+		Type:     schema.TypeString,
+		Optional: true,
+	},
+	"issues_enabled": {
+		Type:     schema.TypeBool,
+		Optional: true,
+		Default:  true,
+	},
+	"merge_requests_enabled": {
+		Type:     schema.TypeBool,
+		Optional: true,
+		Default:  true,
+	},
+	"approvals_before_merge": {
+		Type:     schema.TypeInt,
+		Optional: true,
+		Default:  0,
+	},
+	"wiki_enabled": {
+		Type:     schema.TypeBool,
+		Optional: true,
+		Default:  true,
+	},
+	"snippets_enabled": {
+		Type:     schema.TypeBool,
+		Optional: true,
+		Default:  true,
+	},
+	"container_registry_enabled": {
+		Type:     schema.TypeBool,
+		Optional: true,
+		Default:  true,
+	},
+	"visibility_level": {
+		Type:         schema.TypeString,
+		Optional:     true,
+		ValidateFunc: validation.StringInSlice([]string{"private", "internal", "public"}, true),
+		Default:      "private",
+	},
+	"merge_method": {
+		Type:         schema.TypeString,
+		Optional:     true,
+		ValidateFunc: validation.StringInSlice([]string{"merge", "rebase_merge", "ff"}, true),
+		Default:      "merge",
+	},
+	"only_allow_merge_if_pipeline_succeeds": {
+		Type:     schema.TypeBool,
+		Optional: true,
+		Default:  false,
+	},
+	"only_allow_merge_if_all_discussions_are_resolved": {
+		Type:     schema.TypeBool,
+		Optional: true,
+		Default:  false,
+	},
+	"ssh_url_to_repo": {
+		Type:     schema.TypeString,
+		Computed: true,
+	},
+	"http_url_to_repo": {
+		Type:     schema.TypeString,
+		Computed: true,
+	},
+	"web_url": {
+		Type:     schema.TypeString,
+		Computed: true,
+	},
+	"runners_token": {
+		Type:     schema.TypeString,
+		Computed: true,
+	},
+	"shared_runners_enabled": {
+		Type:     schema.TypeBool,
+		Optional: true,
+		Computed: true,
+	},
+	"tags": {
+		Type:     schema.TypeSet,
+		Optional: true,
+		ForceNew: false,
+		Elem:     &schema.Schema{Type: schema.TypeString},
+		Set:      schema.HashString,
+	},
+	"shared_with_groups": {
+		Type:     schema.TypeSet,
+		Optional: true,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"group_id": {
+					Type:     schema.TypeInt,
+					Required: true,
+				},
+				"group_access_level": {
+					Type:     schema.TypeString,
+					Required: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"no one", "guest", "reporter", "developer", "maintainer"}, false),
+				},
+				"group_name": {
+					Type:     schema.TypeString,
+					Computed: true,
+				},
+			},
+		},
+	},
+	"archived": {
+		Type:        schema.TypeBool,
+		Description: "Whether the project is archived.",
+		Optional:    true,
+		Default:     false,
+	},
+}
+
 func resourceGitlabProject() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceGitlabProjectCreate,
@@ -20,129 +159,7 @@ func resourceGitlabProject() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-
-		Schema: map[string]*schema.Schema{
-			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
-			"path": {
-				Type:     schema.TypeString,
-				Optional: true,
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					if new == "" {
-						return true
-					}
-					return old == new
-				},
-			},
-			"namespace_id": {
-				Type:     schema.TypeInt,
-				Optional: true,
-				ForceNew: true,
-				Computed: true,
-			},
-			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"default_branch": {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"issues_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
-			"merge_requests_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
-			"approvals_before_merge": {
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  0,
-			},
-			"wiki_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
-			"snippets_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
-			"visibility_level": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				ValidateFunc: validation.StringInSlice([]string{"private", "internal", "public"}, true),
-				Default:      "private",
-			},
-			"merge_method": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				ValidateFunc: validation.StringInSlice([]string{"merge", "rebase_merge", "ff"}, true),
-				Default:      "merge",
-			},
-			"only_allow_merge_if_pipeline_succeeds": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-			},
-			"only_allow_merge_if_all_discussions_are_resolved": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-			},
-			"ssh_url_to_repo": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"http_url_to_repo": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"web_url": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"runners_token": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"tags": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				ForceNew: false,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      schema.HashString,
-			},
-			"shared_with_groups": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"group_id": {
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"group_access_level": {
-							Type:     schema.TypeString,
-							Required: true,
-							ValidateFunc: validation.StringInSlice([]string{
-								"no one", "guest", "reporter", "developer", "maintainer"}, false),
-						},
-						"group_name": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-					},
-				},
-			},
-		},
+		Schema: resourceGitLabProjectSchema,
 	}
 }
 
@@ -157,6 +174,7 @@ func resourceGitlabProjectSetToState(d *schema.ResourceData, project *gitlab.Pro
 	d.Set("approvals_before_merge", project.ApprovalsBeforeMerge)
 	d.Set("wiki_enabled", project.WikiEnabled)
 	d.Set("snippets_enabled", project.SnippetsEnabled)
+	d.Set("container_registry_enabled", project.ContainerRegistryEnabled)
 	d.Set("visibility_level", string(project.Visibility))
 	d.Set("merge_method", string(project.MergeMethod))
 	d.Set("only_allow_merge_if_pipeline_succeeds", project.OnlyAllowMergeIfPipelineSucceeds)
@@ -166,12 +184,15 @@ func resourceGitlabProjectSetToState(d *schema.ResourceData, project *gitlab.Pro
 	d.Set("http_url_to_repo", project.HTTPURLToRepo)
 	d.Set("web_url", project.WebURL)
 	d.Set("runners_token", project.RunnersToken)
+	d.Set("shared_runners_enabled", project.SharedRunnersEnabled)
 	d.Set("shared_with_groups", flattenSharedWithGroupsOptions(project))
 	d.Set("tags", project.TagList)
+	d.Set("archived", project.Archived)
 }
 
 func resourceGitlabProjectCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*gitlab.Client)
+
 	options := &gitlab.CreateProjectOptions{
 		Name:                             gitlab.String(d.Get("name").(string)),
 		IssuesEnabled:                    gitlab.Bool(d.Get("issues_enabled").(bool)),
@@ -179,26 +200,51 @@ func resourceGitlabProjectCreate(d *schema.ResourceData, meta interface{}) error
 		ApprovalsBeforeMerge:             gitlab.Int(d.Get("approvals_before_merge").(int)),
 		WikiEnabled:                      gitlab.Bool(d.Get("wiki_enabled").(bool)),
 		SnippetsEnabled:                  gitlab.Bool(d.Get("snippets_enabled").(bool)),
+		ContainerRegistryEnabled:         gitlab.Bool(d.Get("container_registry_enabled").(bool)),
 		Visibility:                       stringToVisibilityLevel(d.Get("visibility_level").(string)),
 		MergeMethod:                      stringToMergeMethod(d.Get("merge_method").(string)),
 		OnlyAllowMergeIfPipelineSucceeds: gitlab.Bool(d.Get("only_allow_merge_if_pipeline_succeeds").(bool)),
 		OnlyAllowMergeIfAllDiscussionsAreResolved: gitlab.Bool(d.Get("only_allow_merge_if_all_discussions_are_resolved").(bool)),
+		SharedRunnersEnabled:                      gitlab.Bool(d.Get("shared_runners_enabled").(bool)),
+	}
+
+	// need to manage partial state since project creation may require
+	// more than a single API call, and they may all fail independently;
+	// the default set of attributes is prepopulated with those used above
+	d.Partial(true)
+	setProperties := []string{
+		"name",
+		"issues_enabled",
+		"merge_requests_enabled",
+		"approvals_before_merge",
+		"wiki_enabled",
+		"snippets_enabled",
+		"container_registry_enabled",
+		"visibility_level",
+		"merge_method",
+		"only_allow_merge_if_pipeline_succeeds",
+		"only_allow_merge_if_all_discussions_are_resolved",
+		"shared_runners_enabled",
 	}
 
 	if v, ok := d.GetOk("path"); ok {
 		options.Path = gitlab.String(v.(string))
+		setProperties = append(setProperties, "path")
 	}
 
 	if v, ok := d.GetOk("namespace_id"); ok {
 		options.NamespaceID = gitlab.Int(v.(int))
+		setProperties = append(setProperties, "namespace_id")
 	}
 
 	if v, ok := d.GetOk("description"); ok {
 		options.Description = gitlab.String(v.(string))
+		setProperties = append(setProperties, "description")
 	}
 
 	if v, ok := d.GetOk("tags"); ok {
 		options.TagList = stringSetToStringSlice(v.(*schema.Set))
+		setProperties = append(setProperties, "tags")
 	}
 
 	log.Printf("[DEBUG] create gitlab project %q", *options.Name)
@@ -208,19 +254,38 @@ func resourceGitlabProjectCreate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	if v, ok := d.GetOk("shared_with_groups"); ok {
-		options := expandSharedWithGroupsOptions(v)
+	for _, setProperty := range setProperties {
+		log.Printf("[DEBUG] partial gitlab project %s creation of property %q", d.Id(), setProperty)
+		d.SetPartial(setProperty)
+	}
 
-		for _, option := range options {
-			_, err := client.Projects.ShareProjectWithGroup(project.ID, option)
-			if err != nil {
+	// from this point onwards no matter how we return, resource creation
+	// is committed to state since we set its ID
+	d.SetId(fmt.Sprintf("%d", project.ID))
+
+	if v, ok := d.GetOk("shared_with_groups"); ok {
+		for _, option := range expandSharedWithGroupsOptions(v) {
+			if _, err := client.Projects.ShareProjectWithGroup(project.ID, option); err != nil {
 				return err
 			}
 		}
+		d.SetPartial("shared_with_groups")
 	}
 
-	d.SetId(fmt.Sprintf("%d", project.ID))
+	v := d.Get("archived")
+	if v.(bool) {
+		// strange as it may seem, this project is created in archived state...
+		err := archiveProject(d, meta)
+		if err != nil {
+			log.Printf("[WARN] New project (%s) could not be created in archived state: error %#v", d.Id(), err)
+			return err
+		}
+		d.SetPartial(("archived"))
+	}
 
+	// everything went OK, we can revert to ordinary state management
+	// and let the Gitlab server fill in the resource state via a read
+	d.Partial(false)
 	return resourceGitlabProjectRead(d, meta)
 }
 
@@ -228,14 +293,8 @@ func resourceGitlabProjectRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*gitlab.Client)
 	log.Printf("[DEBUG] read gitlab project %s", d.Id())
 
-	project, response, err := client.Projects.GetProject(d.Id(), nil)
+	project, _, err := client.Projects.GetProject(d.Id(), nil)
 	if err != nil {
-		if response.StatusCode == 404 {
-			log.Printf("[WARN] removing project %s from state because it no longer exists in gitlab", d.Id())
-			d.SetId("")
-			return nil
-		}
-
 		return err
 	}
 
@@ -248,60 +307,89 @@ func resourceGitlabProjectUpdate(d *schema.ResourceData, meta interface{}) error
 
 	options := &gitlab.EditProjectOptions{}
 
+	// need to manage partial state since project archiving requires
+	// a separate API call which could fail
+	d.Partial(true)
+	updatedProperties := []string{}
+
 	if d.HasChange("name") {
 		options.Name = gitlab.String(d.Get("name").(string))
+		updatedProperties = append(updatedProperties, "name")
 	}
 
 	if d.HasChange("path") && (d.Get("path").(string) != "") {
 		options.Path = gitlab.String(d.Get("path").(string))
+		updatedProperties = append(updatedProperties, "path")
 	}
 
 	if d.HasChange("description") {
 		options.Description = gitlab.String(d.Get("description").(string))
+		updatedProperties = append(updatedProperties, "description")
 	}
 
 	if d.HasChange("default_branch") {
 		options.DefaultBranch = gitlab.String(d.Get("default_branch").(string))
+		updatedProperties = append(updatedProperties, "default_branch")
 	}
 
 	if d.HasChange("visibility_level") {
 		options.Visibility = stringToVisibilityLevel(d.Get("visibility_level").(string))
+		updatedProperties = append(updatedProperties, "visibility_level")
 	}
 
 	if d.HasChange("merge_method") {
 		options.MergeMethod = stringToMergeMethod(d.Get("merge_method").(string))
+		updatedProperties = append(updatedProperties, "merge_method")
 	}
 
 	if d.HasChange("only_allow_merge_if_pipeline_succeeds") {
 		options.OnlyAllowMergeIfPipelineSucceeds = gitlab.Bool(d.Get("only_allow_merge_if_pipeline_succeeds").(bool))
+		updatedProperties = append(updatedProperties, "only_allow_merge_if_pipeline_succeeds")
 	}
 
 	if d.HasChange("only_allow_merge_if_all_discussions_are_resolved") {
 		options.OnlyAllowMergeIfAllDiscussionsAreResolved = gitlab.Bool(d.Get("only_allow_merge_if_all_discussions_are_resolved").(bool))
+		updatedProperties = append(updatedProperties, "only_allow_merge_if_all_discussions_are_resolved")
 	}
 
 	if d.HasChange("issues_enabled") {
 		options.IssuesEnabled = gitlab.Bool(d.Get("issues_enabled").(bool))
+		updatedProperties = append(updatedProperties, "issues_enabled")
 	}
 
 	if d.HasChange("merge_requests_enabled") {
 		options.MergeRequestsEnabled = gitlab.Bool(d.Get("merge_requests_enabled").(bool))
+		updatedProperties = append(updatedProperties, "merge_requests_enabled")
 	}
 
 	if d.HasChange("approvals_before_merge") {
 		options.ApprovalsBeforeMerge = gitlab.Int(d.Get("approvals_before_merge").(int))
+		updatedProperties = append(updatedProperties, "approvals_before_merge")
 	}
 
 	if d.HasChange("wiki_enabled") {
 		options.WikiEnabled = gitlab.Bool(d.Get("wiki_enabled").(bool))
+		updatedProperties = append(updatedProperties, "wiki_enabled")
 	}
 
 	if d.HasChange("snippets_enabled") {
 		options.SnippetsEnabled = gitlab.Bool(d.Get("snippets_enabled").(bool))
+		updatedProperties = append(updatedProperties, "snippets_enabled")
+	}
+
+	if d.HasChange("shared_runners_enabled") {
+		options.SharedRunnersEnabled = gitlab.Bool(d.Get("shared_runners_enabled").(bool))
+		updatedProperties = append(updatedProperties, "shared_runners_enabled")
 	}
 
 	if d.HasChange("tags") {
 		options.TagList = stringSetToStringSlice(d.Get("tags").(*schema.Set))
+		updatedProperties = append(updatedProperties, "tags")
+	}
+
+	if d.HasChange("container_registry_enabled") {
+		options.ContainerRegistryEnabled = gitlab.Bool(d.Get("container_registry_enabled").(bool))
+		updatedProperties = append(updatedProperties, "container_registry_enabled")
 	}
 
 	if *options != (gitlab.EditProjectOptions{}) {
@@ -310,12 +398,40 @@ func resourceGitlabProjectUpdate(d *schema.ResourceData, meta interface{}) error
 		if err != nil {
 			return err
 		}
+		for _, updatedProperty := range updatedProperties {
+			log.Printf("[DEBUG] partial gitlab project %s update of property %q", d.Id(), updatedProperty)
+			d.SetPartial(updatedProperty)
+		}
 	}
 
 	if d.HasChange("shared_with_groups") {
-		updateSharedWithGroups(d, meta)
+		err := updateSharedWithGroups(d, meta)
+		// TODO: check if handling partial state update in this simplistic
+		// way is ok when an error in the "shared groups" API calls occurs
+		if err != nil {
+			d.SetPartial("shared_with_groups")
+		}
 	}
 
+	if d.HasChange("archived") {
+		v := d.Get("archived")
+		if v.(bool) {
+			err := archiveProject(d, meta)
+			if err != nil {
+				log.Printf("[WARN] Project (%s) could not be archived: error %#v", d.Id(), err)
+				return err
+			}
+		} else {
+			err := unarchiveProject(d, meta)
+			if err != nil {
+				log.Printf("[WARN] Project (%s) could not be unarchived: error %#v", d.Id(), err)
+				return err
+			}
+		}
+		d.SetPartial("archived")
+	}
+
+	d.Partial(false)
 	return resourceGitlabProjectRead(d, meta)
 }
 
@@ -472,5 +588,43 @@ func updateSharedWithGroups(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
+	return nil
+}
+
+// archiveProject calls the Gitlab server to archive a project; if the
+// project is already archived, the call will do nothing (the API is
+// idempotent).
+func archiveProject(d *schema.ResourceData, meta interface{}) error {
+	log.Printf("[TRACE] Project (%s) will be archived", d.Id())
+	client := meta.(*gitlab.Client)
+	out, _, err := client.Projects.ArchiveProject(d.Id())
+	if err != nil {
+		log.Printf("[ERROR] Error archiving project (%s), received %#v", d.Id(), err)
+		return err
+	}
+	if !out.Archived {
+		log.Printf("[ERROR] Project (%s) is still not archived", d.Id())
+		return fmt.Errorf("error archiving project (%s): its status on the server is still unarchived", d.Id())
+	}
+	log.Printf("[TRACE] Project (%s) archived", d.Id())
+	return nil
+}
+
+// unarchiveProject calls the Gitlab server to unarchive a project; if the
+// project is already not archived, the call will do nothing (the API is
+// idempotent).
+func unarchiveProject(d *schema.ResourceData, meta interface{}) error {
+	log.Printf("[INFO] Project (%s) will be unarchived", d.Id())
+	client := meta.(*gitlab.Client)
+	out, _, err := client.Projects.UnarchiveProject(d.Id())
+	if err != nil {
+		log.Printf("[ERROR] Error unarchiving project (%s), received %#v", d.Id(), err)
+		return err
+	}
+	if out.Archived {
+		log.Printf("[ERROR] Project (%s) is still archived", d.Id())
+		return fmt.Errorf("error unarchiving project (%s): its status on the server is still archived", d.Id())
+	}
+	log.Printf("[TRACE] Project (%s) unarchived", d.Id())
 	return nil
 }

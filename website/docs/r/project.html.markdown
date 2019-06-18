@@ -50,6 +50,8 @@ The following arguments are supported:
 
 * `snippets_enabled` - (Optional) Enable snippets for the project.
 
+* `container_registry_enabled` - (Optional) Enable container registry for the project.
+
 * `visibility_level` - (Optional) Set to `public` to create a public project.
   Valid values are `private`, `internal`, `public`.
   Repositories are created as private by default.
@@ -62,10 +64,14 @@ The following arguments are supported:
 
 * `only_allow_merge_if_all_discussions_are_resolved` - (Optional) Set to true if you want allow merges only if all discussions are resolved.
 
+* `shared_runners_enabled` - (Optional) Enable shared runners for this project.
+
 * `shared_with_groups` - (Optional) Enable sharing the project with a list of groups (maps).
   * `group_id` - (Required) Group id of the group you want to share the project with.
-  * `group_access_level` - (Optional) Group's sharing permissions. See [group members permission][group_members_permissions] for more info.
+  * `group_access_level` - (Required) Group's sharing permissions. See [group members permission][group_members_permissions] for more info.
   Valid values are `guest`, `reporter`, `developer`, `master`.
+
+* `archived` - (Optional) Whether the project is in read-only mode (archived). Repositories can be archived/unarchived by toggling this parameter.
 
 ## Attributes Reference
 
